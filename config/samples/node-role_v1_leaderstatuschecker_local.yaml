@@ -10,4 +10,4 @@ spec:
   statefulSetName: bb-noti
   namespace: default
   rpcPort: 8000
-  localDev: false
+  localDev: true
