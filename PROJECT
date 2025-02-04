@@ -7,4 +7,14 @@ layout:
 - go.kubebuilder.io/v4
 projectName: bb-dist-noti-operator
 repo: github.com/opplieam/bb-dist-noti-operator
+resources:
+- api:
+    crdVersion: v1
+    namespaced: true
+  controller: true
+  domain: bb-noti.io
+  group: node-role
+  kind: LeaderStatusChecker
+  path: github.com/opplieam/bb-dist-noti-operator/api/v1
+  version: v1
 version: "3"

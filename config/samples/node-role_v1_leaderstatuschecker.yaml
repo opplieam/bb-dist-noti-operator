@@ -1,0 +1,9 @@
+apiVersion: node-role.bb-noti.io/v1
+kind: LeaderStatusChecker
+metadata:
+  labels:
+    app.kubernetes.io/name: bb-dist-noti-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: leaderstatuschecker-sample
+spec:
+  # TODO(user): Add fields here

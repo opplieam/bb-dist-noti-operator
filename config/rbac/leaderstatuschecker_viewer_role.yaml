@@ -1,0 +1,29 @@
+# This rule is not used by the project bb-dist-noti-operator itself.
+# It is provided to allow the cluster admin to help manage permissions for users.
+#
+# Grants read-only access to node-role.bb-noti.io resources.
+# This role is intended for users who need visibility into these resources
+# without permissions to modify them. It is ideal for monitoring purposes and limited-access viewing.
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: bb-dist-noti-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: leaderstatuschecker-viewer-role
+rules:
+- apiGroups:
+  - node-role.bb-noti.io
+  resources:
+  - leaderstatuscheckers
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - node-role.bb-noti.io
+  resources:
+  - leaderstatuscheckers/status
+  verbs:
+  - get

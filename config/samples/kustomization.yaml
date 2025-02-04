@@ -1,0 +1,4 @@
+## Append samples of your project ##
+resources:
+- node-role_v1_leaderstatuschecker.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples
