@@ -28,8 +28,18 @@ type LeaderStatusCheckerSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// Foo is an example field of LeaderStatusChecker. Edit leaderstatuschecker_types.go to remove/update
-	Foo string `json:"foo,omitempty"`
+	// IntervalSeconds is the interval in seconds to check the leader status.
+	// +kubebuilder:validation:Minimum=1
+	IntervalSeconds int32 `json:"intervalSeconds"`
+
+	// StatefulSetName is the name of the StatefulSet to monitor pods from.
+	StatefulSetName string `json:"statefulSetName"`
+
+	// Namespace is the namespace where the StatefulSet is deployed.
+	Namespace string `json:"namespace"`
+
+	// RPCPort is the port number for gRPC service to check leader status.
+	RPCPort int32 `json:"rpcPort"`
 }
 
 // LeaderStatusCheckerStatus defines the observed state of LeaderStatusChecker.
@@ -42,6 +52,8 @@ type LeaderStatusCheckerStatus struct {
 // +kubebuilder:subresource:status
 
 // LeaderStatusChecker is the Schema for the leaderstatuscheckers API.
+// +kubebuilder:printcolumn:JSONPath=".spec.statefulSetName",name=StatefulSetName,type=string
+// +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name=Age,type=date
 type LeaderStatusChecker struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
