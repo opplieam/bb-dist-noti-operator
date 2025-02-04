@@ -2,8 +2,6 @@ module github.com/opplieam/bb-dist-noti-operator
 
 go 1.23.3
 
-godebug default=go1.23
-
 require (
 	github.com/golang/protobuf v1.5.4
 	github.com/onsi/ginkgo/v2 v2.21.0
