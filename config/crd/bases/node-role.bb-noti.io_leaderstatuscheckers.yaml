@@ -18,11 +18,14 @@ spec:
     - jsonPath: .spec.statefulSetName
       name: StatefulSetName
       type: string
-    - jsonPath: .metadata.creationTimestamp
-      name: Age
-      type: date
+    - jsonPath: .status.LeaderNode
+      name: LeaderNode
+      type: string
     - jsonPath: .status.lastUpdated
       name: LastUpdated
+      type: date
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
       type: date
     name: v1
     schema:
@@ -86,7 +89,11 @@ spec:
                 description: |-
                   INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
                   Important: Run "make" to regenerate code after modifying this file
+                  LastUpdated is the time the labels were last updated
                 format: date-time
+                type: string
+              leaderNode:
+                description: LeaderNode is the name of the current leader node
                 type: string
             type: object
         type: object

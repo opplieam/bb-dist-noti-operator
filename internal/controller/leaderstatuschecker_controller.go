@@ -81,7 +81,7 @@ func (r *LeaderStatusCheckerReconciler) Reconcile(ctx context.Context, req ctrl.
 	grpcPort := leaderStatusChecker.Spec.RPCPort
 	localDev := leaderStatusChecker.Spec.LocalDev
 
-	l.Info("Reconciling LeaderStatusChecker", "intervalSeconds",
+	l.V(2).Info("Reconciling LeaderStatusChecker", "intervalSeconds",
 		intervalSeconds, "statefulSetName", statefulSetName, "namespace", namespace)
 
 	// Fetch the StatefulSet
@@ -148,18 +148,21 @@ func (r *LeaderStatusCheckerReconciler) Reconcile(ctx context.Context, req ctrl.
 			}
 
 			leaderStatusChecker.Status.LastUpdated = metav1.Now()
+			leaderStatusChecker.Status.LeaderNode = podName
 			if err = r.Status().Update(ctx, &leaderStatusChecker); err != nil {
 				l.Error(err, "Failed to update CR status", "pod", podName)
 				continue
 			}
+
+			l.V(1).Info("Successfully updated labels", "pod", podName, "role", expectedLabels)
 		} else {
-			l.V(1).Info("Pod labels are already correct.",
+			l.V(2).Info("Pod labels are already correct.",
 				"pod", podName, "role", expectedLabels)
 		}
 
 	}
 
-	l.V(1).Info("Successfully reconciled LeaderStatusChecker.")
+	l.V(2).Info("Successfully reconciled LeaderStatusChecker.")
 	return ctrl.Result{RequeueAfter: time.Duration(intervalSeconds) * time.Second}, nil
 }
 

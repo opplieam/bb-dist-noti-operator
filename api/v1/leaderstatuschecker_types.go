@@ -49,7 +49,11 @@ type LeaderStatusCheckerSpec struct {
 type LeaderStatusCheckerStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	// LastUpdated is the time the labels were last updated
 	LastUpdated metav1.Time `json:"lastUpdated,omitempty"`
+
+	// LeaderNode is the name of the current leader node
+	LeaderNode string `json:"leaderNode,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -57,8 +61,9 @@ type LeaderStatusCheckerStatus struct {
 
 // LeaderStatusChecker is the Schema for the leaderstatuscheckers API.
 // +kubebuilder:printcolumn:JSONPath=".spec.statefulSetName",name=StatefulSetName,type=string
-// +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name=Age,type=date
+// +kubebuilder:printcolumn:JSONPath=".status.LeaderNode",name=LeaderNode,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.lastUpdated",name=LastUpdated,type=date
+// +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name=Age,type=date
 type LeaderStatusChecker struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
