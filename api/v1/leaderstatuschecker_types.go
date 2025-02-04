@@ -40,12 +40,16 @@ type LeaderStatusCheckerSpec struct {
 
 	// RPCPort is the port number for gRPC service to check leader status.
 	RPCPort int32 `json:"rpcPort"`
+
+	// LocalDev is a flag to indicate if the operator is running locally.
+	LocalDev bool `json:"localDev"`
 }
 
 // LeaderStatusCheckerStatus defines the observed state of LeaderStatusChecker.
 type LeaderStatusCheckerStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
+	LastUpdated metav1.Time `json:"lastUpdated,omitempty"`
 }
 
 // +kubebuilder:object:root=true
@@ -54,6 +58,7 @@ type LeaderStatusCheckerStatus struct {
 // LeaderStatusChecker is the Schema for the leaderstatuscheckers API.
 // +kubebuilder:printcolumn:JSONPath=".spec.statefulSetName",name=StatefulSetName,type=string
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name=Age,type=date
+// +kubebuilder:printcolumn:JSONPath=".status.lastUpdated",name=LastUpdated,type=date
 type LeaderStatusChecker struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

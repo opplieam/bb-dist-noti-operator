@@ -21,6 +21,9 @@ spec:
     - jsonPath: .metadata.creationTimestamp
       name: Age
       type: date
+    - jsonPath: .status.lastUpdated
+      name: LastUpdated
+      type: date
     name: v1
     schema:
       openAPIV3Schema:
@@ -53,6 +56,10 @@ spec:
                 format: int32
                 minimum: 1
                 type: integer
+              localDev:
+                description: LocalDev is a flag to indicate if the operator is running
+                  locally.
+                type: boolean
               namespace:
                 description: Namespace is the namespace where the StatefulSet is deployed.
                 type: string
@@ -67,12 +74,20 @@ spec:
                 type: string
             required:
             - intervalSeconds
+            - localDev
             - namespace
             - rpcPort
             - statefulSetName
             type: object
           status:
             description: LeaderStatusCheckerStatus defines the observed state of LeaderStatusChecker.
+            properties:
+              lastUpdated:
+                description: |-
+                  INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
+                  Important: Run "make" to regenerate code after modifying this file
+                format: date-time
+                type: string
             type: object
         type: object
     served: true
