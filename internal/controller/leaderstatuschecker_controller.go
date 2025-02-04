@@ -135,6 +135,7 @@ func (r *LeaderStatusCheckerReconciler) Reconcile(ctx context.Context, req ctrl.
 		expectedLabels := "follower"
 		if isLeader {
 			expectedLabels = "leader"
+			leaderStatusChecker.Status.LeaderNode = podName
 		}
 		currentLabels := pod.GetLabels()
 
@@ -146,18 +147,15 @@ func (r *LeaderStatusCheckerReconciler) Reconcile(ctx context.Context, req ctrl.
 				l.Error(err, "Failed to update Pod labels.", "pod", podName)
 				continue
 			}
-
-			leaderStatusChecker.Status.LastUpdated = metav1.Now()
-			leaderStatusChecker.Status.LeaderNode = podName
-			if err = r.Status().Update(ctx, &leaderStatusChecker); err != nil {
-				l.Error(err, "Failed to update CR status", "pod", podName)
-				continue
-			}
-
 			l.V(1).Info("Successfully updated labels", "pod", podName, "role", expectedLabels)
+			leaderStatusChecker.Status.LastUpdated = metav1.Now()
 		} else {
 			l.V(2).Info("Pod labels are already correct.",
 				"pod", podName, "role", expectedLabels)
+		}
+
+		if err = r.Status().Update(ctx, &leaderStatusChecker); err != nil {
+			l.Error(err, "Failed to update CR status", "pod", podName)
 		}
 
 	}

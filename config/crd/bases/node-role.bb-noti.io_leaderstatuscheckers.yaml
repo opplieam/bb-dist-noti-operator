@@ -18,7 +18,7 @@ spec:
     - jsonPath: .spec.statefulSetName
       name: StatefulSetName
       type: string
-    - jsonPath: .status.LeaderNode
+    - jsonPath: .status.leaderNode
       name: LeaderNode
       type: string
     - jsonPath: .status.lastUpdated

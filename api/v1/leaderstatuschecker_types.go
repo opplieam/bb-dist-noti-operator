@@ -61,7 +61,7 @@ type LeaderStatusCheckerStatus struct {
 
 // LeaderStatusChecker is the Schema for the leaderstatuscheckers API.
 // +kubebuilder:printcolumn:JSONPath=".spec.statefulSetName",name=StatefulSetName,type=string
-// +kubebuilder:printcolumn:JSONPath=".status.LeaderNode",name=LeaderNode,type=string
+// +kubebuilder:printcolumn:JSONPath=".status.leaderNode",name=LeaderNode,type=string
 // +kubebuilder:printcolumn:JSONPath=".status.lastUpdated",name=LastUpdated,type=date
 // +kubebuilder:printcolumn:JSONPath=".metadata.creationTimestamp",name=Age,type=date
 type LeaderStatusChecker struct {
