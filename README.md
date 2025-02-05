@@ -1,8 +1,30 @@
 # bb-dist-noti-operator
-// TODO(user): Add simple overview of use/purpose
+This Kubernetes operator automatically manages node roles (leader/follower) 
+for applications running as StatefulSets by monitoring their leader status via gRPC. 
+It simplifies the process of identifying and tracking leader and follower nodes in distributed systems 
+within Kubernetes.
+
+
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+
+The `bb-dist-noti-operator` is specifically designed to work in conjunction with the 
+[bb-dist-noti](https://github.com/opplieam/bb-dist-noti/) application (and similar distributed systems) to enhance 
+routing and management within Kubernetes.  `bb-dist-noti` and comparable applications often utilize a 
+leader-follower architecture. This operator automates the critical task of identifying and labeling leader and follower 
+pods within a Kubernetes StatefulSet deployment of such applications.
+
+A key intended use case is to integrate this operator with an Nginx Ingress controller. By leveraging the `node-role` 
+labels applied by the `bb-dist-noti-operator`, you can configure your Nginx Ingress to intelligently 
+route incoming HTTP traffic **exclusively to the follower nodes** of your application.  
+This setup is beneficial in scenarios where follower nodes are designed to handle read requests or 
+other types of user traffic, while the leader node is primarily responsible for write operations, coordination, 
+or background tasks.
+
+By automatically and dynamically managing `node-role` labels, the `bb-dist-noti-operator` simplifies the configuration 
+and ensures the consistent and accurate routing of traffic based on the real-time leader/follower status of 
+your distributed application. This leads to improved application availability, scalability, 
+and maintainability by decoupling routing logic from manual pod status tracking.
 
 ## Getting Started
 
@@ -40,6 +62,8 @@ privileges or be logged in as admin.
 
 **Create instances of your solution**
 You can apply the samples (examples) from the config/sample:
+
+Set `localDev` to false to prevent gRPC calls during local development.
 
 ```sh
 kubectl apply -k config/samples/
@@ -110,12 +134,6 @@ the '--force' flag and manually ensure that any custom configuration
 previously added to 'dist/chart/values.yaml' or 'dist/chart/manager/manager.yaml'
 is manually re-applied afterwards.
 
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-**NOTE:** Run `make help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
 
 ## License
 
