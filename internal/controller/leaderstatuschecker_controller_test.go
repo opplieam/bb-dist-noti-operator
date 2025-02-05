@@ -17,68 +17,186 @@ limitations under the License.
 package controller
 
 import (
-	"context"
+	"strconv"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
+	controllerclient "sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	noderolev1 "github.com/opplieam/bb-dist-noti-operator/api/v1"
 )
 
 var _ = Describe("LeaderStatusChecker Controller", func() {
-	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
-
-		ctx := context.Background()
-
-		typeNamespacedName := types.NamespacedName{
+	const (
+		resourceName      = "test-leaderstatuschecker"
+		statefulSetName   = "test-statefulset"
+		resourceNamespace = "default"
+		intervalSeconds   = 5
+		grpcPort          = 8000
+	)
+	var (
+		leaderStatusChecker *noderolev1.LeaderStatusChecker
+		statefulSet         *appsv1.StatefulSet
+		typeNamespacedName  = types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: resourceNamespace,
 		}
-		leaderstatuschecker := &noderolev1.LeaderStatusChecker{}
+	)
 
-		BeforeEach(func() {
-			By("creating the custom resource for the Kind LeaderStatusChecker")
-			err := k8sClient.Get(ctx, typeNamespacedName, leaderstatuschecker)
-			if err != nil && errors.IsNotFound(err) {
-				resource := &noderolev1.LeaderStatusChecker{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
+	BeforeEach(func() {
+		leaderStatusChecker = &noderolev1.LeaderStatusChecker{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      resourceName,
+				Namespace: resourceNamespace,
+			},
+			Spec: noderolev1.LeaderStatusCheckerSpec{
+				IntervalSeconds: intervalSeconds,
+				StatefulSetName: statefulSetName,
+				Namespace:       resourceNamespace,
+				RPCPort:         grpcPort,
+				// Enable LocalDev for unit tests to skip gRPC
+				LocalDev: true,
+			},
+		}
+
+		statefulSet = &appsv1.StatefulSet{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      statefulSetName,
+				Namespace: resourceNamespace,
+			},
+			Spec: appsv1.StatefulSetSpec{
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{
+						"app": "test-app",
 					},
-					// TODO(user): Specify other spec details if needed.
-				}
-				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
+				},
+				Replicas: intPtr(3),
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "test-app"}},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{
+							Name:  "test-container",
+							Image: "test-image",
+						}},
+					},
+				},
+			},
+		}
+
+	})
+
+	AfterEach(func() {
+		// Cleanup resources after each test
+		err := k8sClient.Delete(ctx, leaderStatusChecker)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				Expect(err).ToNot(HaveOccurred(), "Error during LeaderStatusChecker deletion (other than NotFound)")
 			}
-		})
+		}
 
-		AfterEach(func() {
-			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &noderolev1.LeaderStatusChecker{}
-			err := k8sClient.Get(ctx, typeNamespacedName, resource)
-			Expect(err).NotTo(HaveOccurred())
+		err = k8sClient.Delete(ctx, statefulSet)
+		if err != nil {
+			if !errors.IsNotFound(err) {
+				Expect(err).ToNot(HaveOccurred(), "Error during StatefulSet deletion (other than NotFound)")
+			}
+		}
+	})
 
-			By("Cleanup the specific resource instance LeaderStatusChecker")
-			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
-		})
-		It("should successfully reconcile the resource", func() {
-			By("Reconciling the created resource")
-			controllerReconciler := &LeaderStatusCheckerReconciler{
+	Context("Reconcile", func() {
+		It("should handle resource not found", func() {
+			cr := &LeaderStatusCheckerReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
-
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
-			})
+			_, err := cr.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
 			Expect(err).NotTo(HaveOccurred())
-			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
-			// Example: If you expect a certain status condition after reconciliation, verify it here.
+		})
+		It("should handle StatefulSet not found", func() {
+			Expect(k8sClient.Create(ctx, leaderStatusChecker)).To(Succeed())
+
+			cr := &LeaderStatusCheckerReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+			_, err := cr.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
+			Expect(err).NotTo(HaveOccurred())
+		})
+		It("should successfully reconcile and update pod labels", func() {
+			Expect(k8sClient.Create(ctx, leaderStatusChecker)).To(Succeed())
+			Expect(k8sClient.Create(ctx, statefulSet)).To(Succeed())
+
+			// Create pods for the StatefulSet (simulating StatefulSet controller)
+			for i := range *statefulSet.Spec.Replicas {
+				pod := &corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      statefulSetName + "-" + strconv.Itoa(int(i)),
+						Namespace: resourceNamespace,
+						Labels:    statefulSet.Spec.Selector.MatchLabels,
+					},
+					Spec: statefulSet.Spec.Template.Spec,
+					Status: corev1.PodStatus{
+						Phase: corev1.PodRunning,
+					},
+				}
+				Expect(k8sClient.Create(ctx, pod)).To(Succeed(), "Failed to create pod")
+			}
+
+			cr := &LeaderStatusCheckerReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+			}
+			result, err := cr.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
+			Expect(err).NotTo(HaveOccurred(), "Reconcile should not return an error")
+
+			// Check RequeueAfter
+			Expect(result.RequeueAfter).To(Equal(time.Duration(intervalSeconds)*time.Second),
+				"RequeueAfter should be equal to intervalSeconds")
+
+			// Verify Pod labels are updated. At least one pod should be leader.
+			podList := &corev1.PodList{}
+			Expect(k8sClient.List(ctx,
+				podList,
+				controllerclient.InNamespace(resourceNamespace),
+				controllerclient.MatchingLabels(statefulSet.Spec.Selector.MatchLabels),
+			)).To(Succeed())
+
+			leaderCount := 0
+			followerCount := 0
+			for _, pod := range podList.Items {
+				labels := pod.GetLabels()
+				Expect(labels).Should(HaveKey("node-role"))
+				if labels["node-role"] == "leader" {
+					leaderCount++
+				} else if labels["node-role"] == "follower" {
+					followerCount++
+				} else {
+					Fail("Unexpected node-role label value")
+				}
+			}
+			Expect(leaderCount).To(Equal(1), "Expected 1 leader pod")
+			// Rest should be followers
+			Expect(followerCount).To(Equal(int(*statefulSet.Spec.Replicas) - 1))
+
+			// Verify LeaderStatusChecker status is updated
+			updatedLeaderStatusChecker := &noderolev1.LeaderStatusChecker{}
+			Expect(k8sClient.Get(ctx, typeNamespacedName, updatedLeaderStatusChecker)).To(Succeed())
+			Expect(updatedLeaderStatusChecker.Status.LastUpdated).NotTo(BeNil(),
+				"LastUpdated should not be nil")
+			Expect(updatedLeaderStatusChecker.Status.LeaderNode).NotTo(BeEmpty(),
+				"LeaderNode should not be empty")
+
 		})
 	})
+
 })
+
+func intPtr(val int32) *int32 {
+	return &val
+}
