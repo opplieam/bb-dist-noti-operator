@@ -161,6 +161,8 @@ func (r *LeaderStatusCheckerReconciler) Reconcile(ctx context.Context, req ctrl.
 	}
 
 	l.V(2).Info("Successfully reconciled LeaderStatusChecker.")
+
+	// TODO: Instead of periodic. Trigger only when pod is created or deleted ?
 	return ctrl.Result{RequeueAfter: time.Duration(intervalSeconds) * time.Second}, nil
 }
 
