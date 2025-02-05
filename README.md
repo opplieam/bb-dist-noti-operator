@@ -4,7 +4,7 @@ for applications running as StatefulSets by monitoring their leader status via g
 It simplifies the process of identifying and tracking leader and follower nodes in distributed systems 
 within Kubernetes.
 
-
+![](https://raw.githubusercontent.com/opplieam/bb-dist-noti-operator/refs/heads/main/k8s-operator.png)
 
 ## Description
 
