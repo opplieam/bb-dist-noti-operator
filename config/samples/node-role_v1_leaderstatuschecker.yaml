@@ -6,7 +6,6 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: leaderstatuschecker-sample
 spec:
-  intervalSeconds: 10
   statefulSetName: bb-noti
   namespace: default
   rpcPort: 8000
