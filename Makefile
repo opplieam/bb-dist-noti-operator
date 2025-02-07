@@ -1,5 +1,5 @@
 # Image URL to use all building/pushing image targets
-IMG ?= opplieam/bb-noti-operator:v0.0.4
+IMG ?= opplieam/bb-noti-operator:v0.0.5
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -106,6 +106,10 @@ run: manifests generate fmt vet ## Run a controller from your host.
 .PHONY: docker-build
 docker-build: ## Build docker image with the manager.
 	$(CONTAINER_TOOL) build -t ${IMG} .
+
+.PHONY: kind-docker-build
+kind-docker-build: docker-build ## Build docker image with the manager and load it into kind cluster.
+	kind load docker-image ${IMG}
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.

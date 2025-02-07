@@ -18,7 +18,6 @@ package controller
 
 import (
 	"strconv"
-	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -38,7 +37,6 @@ var _ = Describe("LeaderStatusChecker Controller", func() {
 		resourceName      = "test-leaderstatuschecker"
 		statefulSetName   = "test-statefulset"
 		resourceNamespace = "default"
-		intervalSeconds   = 5
 		grpcPort          = 8000
 	)
 	var (
@@ -57,7 +55,6 @@ var _ = Describe("LeaderStatusChecker Controller", func() {
 				Namespace: resourceNamespace,
 			},
 			Spec: noderolev1.LeaderStatusCheckerSpec{
-				IntervalSeconds: intervalSeconds,
 				StatefulSetName: statefulSetName,
 				Namespace:       resourceNamespace,
 				RPCPort:         grpcPort,
@@ -152,12 +149,8 @@ var _ = Describe("LeaderStatusChecker Controller", func() {
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 			}
-			result, err := cr.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
+			_, err := cr.Reconcile(ctx, reconcile.Request{NamespacedName: typeNamespacedName})
 			Expect(err).NotTo(HaveOccurred(), "Reconcile should not return an error")
-
-			// Check RequeueAfter
-			Expect(result.RequeueAfter).To(Equal(time.Duration(intervalSeconds)*time.Second),
-				"RequeueAfter should be equal to intervalSeconds")
 
 			// Verify Pod labels are updated. At least one pod should be leader.
 			podList := &corev1.PodList{}

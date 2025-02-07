@@ -22,9 +22,9 @@ import (
 	"math/rand/v2"
 	"net"
 	"strconv"
-	"time"
 
 	emptypb "github.com/golang/protobuf/ptypes/empty"
+	noderolev1 "github.com/opplieam/bb-dist-noti-operator/api/v1"
 	pb "github.com/opplieam/bb-dist-noti/protogen/notification_v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -35,10 +35,13 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-
-	noderolev1 "github.com/opplieam/bb-dist-noti-operator/api/v1"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
 // LeaderStatusCheckerReconciler reconciles a LeaderStatusChecker object
@@ -75,14 +78,12 @@ func (r *LeaderStatusCheckerReconciler) Reconcile(ctx context.Context, req ctrl.
 		return ctrl.Result{}, err
 	}
 
-	intervalSeconds := leaderStatusChecker.Spec.IntervalSeconds
 	statefulSetName := leaderStatusChecker.Spec.StatefulSetName
 	namespace := leaderStatusChecker.Spec.Namespace
 	grpcPort := leaderStatusChecker.Spec.RPCPort
 	localDev := leaderStatusChecker.Spec.LocalDev
 
-	l.V(2).Info("Reconciling LeaderStatusChecker", "intervalSeconds",
-		intervalSeconds, "statefulSetName", statefulSetName, "namespace", namespace)
+	l.V(2).Info("Reconciling LeaderStatusChecker", "statefulSetName", statefulSetName, "namespace", namespace)
 
 	// Fetch the StatefulSet
 	var statefulSet appsv1.StatefulSet
@@ -114,6 +115,10 @@ func (r *LeaderStatusCheckerReconciler) Reconcile(ctx context.Context, req ctrl.
 	pickLeader := rand.IntN(len(podList.Items))
 
 	for i, pod := range podList.Items {
+		if !isPodReady(&pod) && !localDev {
+			l.V(1).Info("Pod is not ready, skipping", "pod", pod.Name)
+			continue
+		}
 		podName := pod.Name
 		podHostname := fmt.Sprintf("%s.%s.%s.svc.cluster.local", podName, statefulSetName, namespace)
 		grpcAddr := net.JoinHostPort(podHostname, strconv.Itoa(int(grpcPort)))
@@ -162,8 +167,7 @@ func (r *LeaderStatusCheckerReconciler) Reconcile(ctx context.Context, req ctrl.
 
 	l.V(2).Info("Successfully reconciled LeaderStatusChecker.")
 
-	// TODO: Instead of periodic. Trigger only when pod is created or deleted ?
-	return ctrl.Result{RequeueAfter: time.Duration(intervalSeconds) * time.Second}, nil
+	return ctrl.Result{}, nil
 }
 
 func (r *LeaderStatusCheckerReconciler) checkLeaderStatus(ctx context.Context, grpcAddr string) (bool, error) {
@@ -193,10 +197,63 @@ func (r *LeaderStatusCheckerReconciler) checkLeaderStatus(ctx context.Context, g
 	return resp.GetIsLeader(), nil
 }
 
+func (r *LeaderStatusCheckerReconciler) getPodsForLeaderStatusChecker(ctx context.Context, pod client.Object) []reconcile.Request {
+	var checkerList noderolev1.LeaderStatusCheckerList
+	if err := r.List(ctx, &checkerList); err != nil {
+		return []reconcile.Request{}
+	}
+	var requests []reconcile.Request
+	for _, checker := range checkerList.Items {
+		if checker.Spec.StatefulSetName == pod.GetLabels()["app.kubernetes.io/name"] &&
+			checker.Spec.Namespace == pod.GetNamespace() {
+			requests = append(requests, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Namespace: checker.Namespace,
+					Name:      checker.Name,
+				},
+			})
+		}
+	}
+
+	return requests
+}
+
+func isPodReady(pod *corev1.Pod) bool {
+	for _, condition := range pod.Status.Conditions {
+		if condition.Type == corev1.PodReady {
+			return condition.Status == corev1.ConditionTrue
+		}
+	}
+	return false
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *LeaderStatusCheckerReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	// Predicate to filter Pod events based on Ready status
+	podPredicate := predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			// Only trigger reconciliation if Ready status changed
+			// Example: Pod goes from Not Ready → Ready, or Ready → Not Ready
+			oldPod := e.ObjectOld.(*corev1.Pod)
+			newPod := e.ObjectNew.(*corev1.Pod)
+			return isPodReady(newPod) != isPodReady(oldPod)
+		},
+		CreateFunc: func(e event.CreateEvent) bool {
+			// Only trigger if the new Pod is Ready
+			pod := e.Object.(*corev1.Pod)
+			return isPodReady(pod)
+		},
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return false
+		},
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&noderolev1.LeaderStatusChecker{}).
+		Watches(
+			&corev1.Pod{},
+			handler.EnqueueRequestsFromMapFunc(r.getPodsForLeaderStatusChecker),
+			builder.WithPredicates(podPredicate),
+		).
 		Named("leaderstatuschecker").
 		Complete(r)
 }

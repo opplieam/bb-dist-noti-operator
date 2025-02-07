@@ -53,12 +53,6 @@ spec:
           spec:
             description: LeaderStatusCheckerSpec defines the desired state of LeaderStatusChecker.
             properties:
-              intervalSeconds:
-                description: IntervalSeconds is the interval in seconds to check the
-                  leader status.
-                format: int32
-                minimum: 1
-                type: integer
               localDev:
                 description: LocalDev is a flag to indicate if the operator is running
                   locally.
@@ -76,7 +70,6 @@ spec:
                   pods from.
                 type: string
             required:
-            - intervalSeconds
             - localDev
             - namespace
             - rpcPort

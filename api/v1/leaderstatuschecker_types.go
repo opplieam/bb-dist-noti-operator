@@ -28,10 +28,6 @@ type LeaderStatusCheckerSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// IntervalSeconds is the interval in seconds to check the leader status.
-	// +kubebuilder:validation:Minimum=1
-	IntervalSeconds int32 `json:"intervalSeconds"`
-
 	// StatefulSetName is the name of the StatefulSet to monitor pods from.
 	StatefulSetName string `json:"statefulSetName"`
 
