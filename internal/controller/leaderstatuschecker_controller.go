@@ -111,7 +111,6 @@ func (r *LeaderStatusCheckerReconciler) Reconcile(ctx context.Context, req ctrl.
 	// Quick hack for fast development is to skip external gRPC called
 	// It randomly picks a leader pod and sets the node-role label to "leader"
 	// If the pod is not leader, it sets the node-role label to "follower"
-	// TODO: Add support for external cluster
 	pickLeader := rand.IntN(len(podList.Items))
 
 	for i, pod := range podList.Items {
